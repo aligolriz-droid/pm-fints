@@ -1,0 +1,25 @@
+# Render Blueprint – 1-Klick-Deploy des FinTS-Service (Weg B, iPad-tauglich)
+# Anleitung: fints-service/README_B_FinTS_Service.md
+#
+# So nutzt du es:
+#   1) Diesen Ordner (mit render.yaml) in ein GitHub-Repo legen.
+#   2) https://dashboard.render.com/select-repo?type=blueprint  öffnen
+#      → dein Repo wählen → Render liest diese Datei und baut alles automatisch.
+#   3) API_KEY wird automatisch erzeugt (Render → Service → Environment ablesen).
+#   4) Fertige Server-URL in der App unter „🏦 Deutsche Bank → 🌐 Remote-Abruf" eintragen.
+#
+# WICHTIG: Nach dem ersten Test ALLOW_ORIGIN von "*" auf deine Netlify-Domain setzen!
+
+services:
+  - type: web
+    name: db-fints
+    runtime: docker
+    rootDir: fints-service
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: API_KEY
+        generateValue: true          # sicherer Zufalls-Key
+      - key: ALLOW_ORIGIN
+        value: "*"                    # -> nach dem Test auf https://DEINNAME.netlify.app einschränken
