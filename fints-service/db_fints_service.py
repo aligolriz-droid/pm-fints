@@ -14,7 +14,7 @@
                     -> db_export-JSON (nach TAN-Eingabe)
    GET  /health     -> {"ok":true}
 
- ┌──────────────────────────────��───────────────────────────────────────┐
+ ┌──────────────────────────────────────────────────────────────────────┐
  │  ⚠️  SICHERHEITSHINWEIS – BITTE LESEN                                  │
  │  Dieser Service verarbeitet deine BANK-PIN und TAN. Wenn du ihn in    │
  │  der Cloud betreibst, verlassen deine Zugangsdaten dein Gerät.        │
@@ -140,7 +140,7 @@ def _collect(client, days: int) -> Dict[str, Any]:
     export = {
         "generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
         "source": "deutsche-bank-fints",
-        "holdings": [], "cash_transactions": [],
+        "holdings": [], "cash_transactions": [], "balances": [], "warnings": [],
     }
     accounts = client.get_sepa_accounts()
     if isinstance(accounts, NeedTANResponse):
@@ -154,13 +154,25 @@ def _collect(client, days: int) -> Dict[str, Any]:
             export["holdings"].extend(_holdings_rows(h))
         except _TanNeeded:
             raise
-        except Exception:
-            pass
+        except Exception as _he:
+            export["warnings"].append("Depot %s nicht abrufbar: %s" % (iban, _he))
         try:
             tx = client.get_transactions(acc, start, end)
             if isinstance(tx, NeedTANResponse):
                 raise _TanNeeded(tx)
             export["cash_transactions"].extend(_tx_rows(tx, iban))
+        except _TanNeeded:
+            raise
+        except Exception:
+            pass
+        try:
+            bal = client.get_balance(acc)
+            if isinstance(bal, NeedTANResponse):
+                raise _TanNeeded(bal)
+            _b = _num(getattr(bal, "amount", bal))
+            if _b is not None:
+                _bd = getattr(bal, "date", None)
+                export["balances"].append({"account": iban, "balance": _b, "date": _bd.isoformat() if hasattr(_bd, "isoformat") else (str(_bd) if _bd else None)})
         except _TanNeeded:
             raise
         except Exception:
